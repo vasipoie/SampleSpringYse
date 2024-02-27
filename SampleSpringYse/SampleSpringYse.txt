@@ -1,0 +1,216 @@
+┌───────────────────────────────
+│	스프링 MVC 하루만에 배우기
+│	::: 2024.02.14
+└───────────────────────────────
+
+1. 필요한 프로그램 설치
+	
+	- JDK 1.8 설정
+	- 이클립스 4.16(2020-06 R)
+	- Spring Tool Suite 3.9.22.RELEASE Plugins
+		> marketplace에서 제공되는 릴리즈버전
+		> 그렇지만 우리가 사용하는 이클립스에의 plugins 버전은 3.9.14.RELEASE임
+	- Apache-tomcat 8.5.x
+	
+	# 이클립스 설치 후, 진행해야 할 사항들
+	1) enc 타입으로 인코딩 설정(UTF-8)
+	2) 본인이 원하는 font 설정(개인적으로 consolar)
+	3) perspective java ee 설정 (default)
+	4) sts 플러그인 설치
+		> help > eclipse marketplace
+		> spring tool 3 standalone edition 검색 후 install
+		
+2. Book 게시판 프로젝트 설정하기(SampleSpringYse)
+
+	2-1 Spring Legacy Project 생성하기
+		- 프로젝트명 : SampleSpringYse
+		- Spring MVC Project Template 선택
+		- Base 패키지 : kr.or.ddit
+		
+	2-2 프로젝트 환경설정
+		- Delpoyment Assembly
+			> Maven 확인
+		- Java Build Path 설정 (3대장 확인)
+			> JDK 확인 1.8
+			> Maven 확인
+			> Server (Tomcat) 확인 (Add Library)
+		- Java Compiler
+			> compiler version 1.8 설정 확인
+		- Project Facets 설정
+			> Dynamic Web Module 3.1 (서블릿 버전 확인)
+			> Java 버전 1.8
+			> Runtime 탭 메뉴에서 Server 체크 후 Apply
+		
+	2-3 메이븐 설정
+		- pom.xml 안에서 설정
+		- java version 1.8 설정
+		- springframework version 5.3.25 설정
+		- 제일 하단 maven plugins source/target 버전 1.8 설정
+		
+		*** 메이븐 안에서의 내용이 설정되었다면 반드시 프로젝트에 반영하여야한다.
+		> 프로젝트 우클릭 > Run As > Maven Clean
+			: 콘솔창에서 Build Success를 확인한다.
+		> 프로젝트 우클릭 > Run As > Maven Build(위에꺼)
+			: Goals는 compile이라고 설정하고 Run한다.
+			: 콘솔창에서 Build Success를 확인한다.
+			
+	2-4 Apache-Tomcat 설정
+		- SampleSpringYse Configurer 대상으로 올리기
+		- Tomcat Overview 탭 내의 port 80 설정
+		- Tomcat Overview 탭 내의 timeout 120s 설정
+		- Tomcat Module 탭 내의 ContextPath를 '/'로 설정
+		
+	2-5 web.xml 서블릿 버전 설정
+		- 서블릿 스키마 버전 설정부, 2.5 및 2_5 버전을 3.1 및 3_1로 설정
+		- 요청(request)과 응답(response)을 모두 UTF-8로 고정하기 위해 인코딩 필터를 설정
+		- encodingFilter 설정
+
+	2-6 로그 레벨 설정
+		- log4j.xml 설정(root 태그의 레벨을 debug로 설정)
+		
+	2-7 기존에 작성된 홈 컨트롤러, 뷰 삭제
+		- HomeController, home.jsp 삭제
+		
+3. BOOK 게시판 만들기
+	
+	3-1 책 등록 컨트롤러 생성하기
+		- class BookInsertController 생성
+		
+	3-2 책 등록 컨트롤러 메소드 생성
+		- public ModelAndView bookForm(){}
+		
+	3-3 책 등록 화면 생성
+		- views/book/form.jsp		
+		
+	3-4 책 등록 화면 확인하기
+	
+────────────────────────────────────────────────
+	# 책 관리 데이터베이스 생성
+		- 계정명 : yse
+		- 비밀번호 : 1234
+		
+	# 책 관리 테이블 생성
+		create table book (
+			book_id number(8) not null,
+			title varchar2(200) not null,
+		    category varchar2(200) default '' null,
+			price number(10) not null,
+			insert_date date default sysdate null,
+			constraint pk_book primary key(book_id)
+		); 
+
+		create sequence seq_book increment by 1 start with 1 nocache;
+		
+────────────────────────────────────────────────
+
+	3-5 메이븐 데이터베이스 라이브러리 설정
+		- 총 6개의 라이브러리 등록
+		- mybatis
+		- mybatis-spring
+		- spring-jdbc
+		- commons-dbcp2
+		- log4jdbc-log4j2-jdbc4
+		- ojdbc8
+		** 설정 후, Maven Build 또는 Maven의 Update Project 진행하여 적용
+			> 우리는 Maven > Update Project로 적용
+			
+	3-6 데이터 소스 설정
+		- root-context.xml 설정
+		
+┌───────────────────────────────
+│	책 입력 만들기
+└───────────────────────────────
+	3-7 책 입력 컨트롤러 메소드 생성
+		- public ModelAndView insertBook(@RequestParam Map<String, Object> map){}
+		- @Controller 어노테이션으로 컨트롤러를 담당하는 빈이라고 알린다.
+		
+	3-8 책 입력 service 인터페이스 메소드 생성
+		- interface BookService
+		- public String insertBook(Map<String, Object> map)
+		
+	3-9 책 입력 service 클래스 생성(BookServiceImpl)
+		- BookService interface를 참조받은 구현체 클래스
+		- public String insertBook(Map<String, Object> map){}
+		- @Service 어노테이션으로 비즈니스 로직을 담당하는 빈이라고 알린다.
+		
+	3-10 책 입력 dao 인터페이스 메소드 생성
+		- interface BookDAO
+		- public int insertBook(Map<String, Object> map)
+		
+	3-11 책 입력 dao 클래스 생성(BookDaoImpl)
+		- BookDAO interface 참조받은 구현체 클래스
+		- public int insertBook(Map<String, Object> map){}
+		- @Repository 어노테이션으로 데이터를 취급하는 빈이라고 알린다.
+		
+	3-12 책 입력 기능 쿼리 생성
+		- resources source package 아래에 sqlmap 폴더 생성 후 쿼리 묶음 파일 관리
+		- book_SQL.xml 생성
+		- 책 입력 기능 쿼리 작성
+			> <insert id="insert" parameterType="hashMap" useGeneratedKeys="true"></insert>
+			> <selectKey></selectKey> 태그를 이용하여 최신 등록된 pk 키 값을 넘겨받은 파라미터 타입에 셋팅하여 전달한다.
+	
+	3-13 책 입력 화면을 출력하고 책 등록 확인하기
+		- 결과 404에러 발생(정상적인 요청 에러)
+		- 책 등록 후, 상세보기로 넘어가지만 목적지에 해당하는 컨트롤러 메소드가 존재하지 않으므로 404에러 발생함.
+		
+┌───────────────────────────────
+│	책 상세보기 만들기
+└───────────────────────────────		
+	3-14 책 상세보기 컨트롤러 메소드 만들기
+		- public ModelAndView detail(@RequestParam Map<String, Object> map){}
+	
+	3-15 책 상세보기 service 인터페이스 메소드 생성
+		- public Map<String, Object> selectBook(@RequestParam Map<String, Object> map)
+		
+	3-16 책 상세보기 service 클래스 메소드 생성
+		- public Map<String, Object> selectBook(@RequestParam Map<String, Object> map){}
+		
+	3-17 책 상세보기 dao 인터페이스 메소드 생성
+		- public Map<String, Object> selectBook(@RequestParam Map<String, Object> map)
+		
+	3-18 책 상세보기 dao 클래스 메소드 생성
+		- public Map<String, Object> selectBook(@RequestParam Map<String, Object> map){}
+		
+	3-19 책 상세보기 기능 쿼리 생성
+		- <select id="selectBox" parameterType="hashMap" resultType="hashMap"></select>
+	
+	3-20 책 상세보기 화면 생성
+		- views/book/detail.jsp
+		
+	3-21 책 상세보기 화면을 출력하고 책 상세보기 확인
+		
+		
+┌───────────────────────────────
+│	책 수정, 삭제, 목록 모두 동일한 순서대로 작성 진행 --------
+└───────────────────────────────
+	
+┌───────────────────────────────
+│	책 검색 만들기
+└───────────────────────────────
+	3-22 책 검색 기능을 만들기 위한 기존 메소드 수정
+		- list 메소드의 파라미터부에 Map<String, Object> map 파라미터 추가(keyword를 받기위함)
+		
+	3-23 책 검색 기능 쿼리 생성
+		where 1=1
+		<if test="keyword" != null and keyword != ''">
+			and (
+				title like '%'||#{keyword}||'%' or
+				category like '%'||#{keyword}||'%'
+			)
+		</if>
+		
+	3-24 책 검색 기능 확인
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+		
+		
